@@ -2,25 +2,34 @@
 
 # requires curl & jq
 
-# upstreamCommit <baseHash>
-# param: bashHash - the commit hash to use for comparing commits (baseHash...HEAD)
-
 (
 set -e
 PS1="$"
 
-purpur=$(curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/PurpurMC/Purpur/compare/$1...ver/1.21.1 | jq -r '.commits[] | "PurpurMC/Purpur@\(.sha[:7]) \(.commit.message | split("\r\n")[0] | split("\n")[0])"')
+current=$(cat gradle.properties | grep leafCommit | sed 's/leafCommit = //')
+upstream=$(git ls-remote https://github.com/Winds-Studio/Leaf | grep ver/1.21.1 | cut -f 1)
 
-updated=""
-logsuffix=""
-if [ ! -z "$purpur" ]; then
-    logsuffix="$logsuffix\n\nPurpur Changes:\n$purpur"
-    updated="Purpur"
+if [ "$current" != "$upstream" ]; then
+    sed -i 's/leafCommit = .*/leafCommit = '"$upstream"'/' gradle.properties
+    {
+      ./gradlew applyPatches --stacktrace && ./gradlew createMojmapPaperclipJar --stacktrace && ./gradlew rebuildPatches --stacktrace
+    } || exit
+
+    git add .
+
+    leaf=$(curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/Winds-Studio/Leaf/compare/$current...ver/1.21.1 | jq -r '.commits[] | "Winds-Studio/Leaf@\(.sha[:7]) \(.commit.message | split("\r\n")[0] | split("\n")[0])"')
+
+    updated=""
+    logsuffix=""
+    if [ ! -z "$leaf" ]; then
+        logsuffix="$logsuffix\n\nLeaf Changes:\n$leaf"
+        updated="Leaf"
+    fi
+    disclaimer="Upstream has released updates that appear to apply and compile correctly"
+
+    log="Updated Upstream ($updated)\n\n${disclaimer}${logsuffix}"
+
+    echo -e "$log" | git commit -F -
 fi
-disclaimer="Upstream has released updates that appear to apply and compile correctly"
-
-log="${UP_LOG_PREFIX}Updated Upstream ($updated)\n\n${disclaimer}${logsuffix}"
-
-echo -e "$log" | git commit -F -
 
 ) || exit 1

@@ -23,7 +23,7 @@ val paperMavenPublicUrl = "https://repo.papermc.io/repository/maven-public/"
 subprojects {
     tasks.withType<JavaCompile>().configureEach {
         options.encoding = Charsets.UTF_8.name()
-        options.release = 21
+        options.release.set(21)
     }
     tasks.withType<Javadoc> {
         options.encoding = Charsets.UTF_8.name()
@@ -31,18 +31,11 @@ subprojects {
     tasks.withType<ProcessResources> {
         filteringCharset = Charsets.UTF_8.name()
     }
-    tasks.withType<Test> {
-        testLogging {
-            showStackTraces = true
-            exceptionFormat = TestExceptionFormat.FULL
-            events(TestLogEvent.STANDARD_OUT)
-        }
-    }
 
     repositories {
         mavenCentral()
         maven(paperMavenPublicUrl)
-        maven("https://jitpack.io")
+        maven("https://ci.pluginwiki.us/plugin/repository/everything/")
     }
 }
 
@@ -67,12 +60,12 @@ paperweight {
     remapRepo = paperMavenPublicUrl
     decompileRepo = paperMavenPublicUrl
 
-    useStandardUpstream("purpur") {
-        url = github("PurpurMC", "Purpur")
-        ref = providers.gradleProperty("purpurCommit")
+    useStandardUpstream("leaf") {
+        url = github("Winds-Studio", "Leaf")
+        ref = providers.gradleProperty("leafCommit")
 
         withStandardPatcher {
-            baseName("Purpur")
+            baseName("Leaf")
 
             apiPatchDir = layout.projectDirectory.dir("patches/api")
             apiOutputDir = layout.projectDirectory.dir("Tentacles-API")
@@ -87,45 +80,5 @@ paperweight {
             patchDir = layout.projectDirectory.dir("patches/generated-api")
             outputDir = layout.projectDirectory.dir("paper-api-generator/generated")
         }
-    }
-}
-
-tasks.generateDevelopmentBundle {
-    apiCoordinates = "org.purpurmc.tentacles:tentacles-api"
-    libraryRepositories.addAll(
-        "https://repo.maven.apache.org/maven2/",
-        paperMavenPublicUrl,
-        "https://repo.purpurmc.org/snapshots",
-    )
-}
-
-allprojects {
-    publishing {
-        repositories {
-            maven("https://repo.purpurmc.org/snapshots") {
-                name = "tentacles"
-                credentials(PasswordCredentials::class)
-            }
-        }
-    }
-}
-
-publishing {
-    publications.create<MavenPublication>("devBundle") {
-        artifact(tasks.generateDevelopmentBundle) {
-            artifactId = "dev-bundle"
-        }
-    }
-}
-
-tasks.register("printMinecraftVersion") {
-    doLast {
-        println(providers.gradleProperty("mcVersion").get().trim())
-    }
-}
-
-tasks.register("printTentaclesVersion") {
-    doLast {
-        println(project.version)
     }
 }
